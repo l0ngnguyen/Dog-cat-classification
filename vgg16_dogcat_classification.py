@@ -1,3 +1,4 @@
+import argparse
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau
 from sklearn.model_selection import train_test_split
 import pandas as pd
@@ -19,8 +20,16 @@ from gc import callbacks
 from tensorflow._api.v2 import train
 #os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
-IMAGE_WIDTH = 120
-IMAGE_HEIGHT = 120
+parse = argparse.ArgumentParser(description='Deep learning training',
+                                formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+parse.add_argument('dataset_df_path', help='input the dataset dataframe')
+parse.add_argument('training_path', help='the training path store all images')
+parse.add_argument('image_size', help='input the height or width of image', default=190, type=int)
+parse.add_argument('--batch_size', help='the batch size when training', type=int, default=10)
+parse.add_argument('--epochs', help='number of epochs', type=int, default=10)
+args = parse.parse_args()
+
+IMAGE_WIDTH = IMAGE_HEIGHT = args.image_size
 IMAGE_SIZE = (IMAGE_WIDTH, IMAGE_HEIGHT)
 IMAGE_CHANNELS = 3
 INPUT_SHAPE = (IMAGE_WIDTH, IMAGE_HEIGHT, IMAGE_CHANNELS)
@@ -117,35 +126,6 @@ def build_model_v2():
 
 # Preprocessing
 # Read file
-def readfile(train_path, size=None):
-    """Nhận đầu vào là một path, đọc hết thông tin ảnh, sau đó
-       trích xuất số lượng ảnh trong thư mục này bằng size 
-       sao cho số lượng chó và mèo bằng nhau
-
-    Args:
-        train_path (string): đường dẫn đến thư mục chứa ảnh
-        size (Int): số lượng ảnh muốn lấy ra
-
-    Returns:
-        Dataframe: chứa dữ liệu về tên ảnh và lớp của chúng 
-    """
-    # return list file name trong train_path
-    filenames = os.listdir(train_path)
-    categories = []
-    for file in filenames:
-        if file.split('.')[0] == 'dog':
-            categories.append('1')
-        else:
-            categories.append('0')
-    df = pd.DataFrame({'file name': filenames,
-                       'category': categories})
-    if size != None:
-        df_cat = df.loc[df.category == '0']
-        df_dog = df.loc[df.category == '1']
-        df = pd.concat([df_cat[0:size // 2], df_dog[0:size // 2]])
-    df = df.sample(frac=1).reset_index(drop=True)
-    return df
-
 
 def get_generator(df, train_path, image_size, test_size=0.2, batch_size=10):
     df_training, df_testing = train_test_split(
@@ -230,10 +210,10 @@ if __name__ == '__main__':
     model = build_model_v2()
     model.summary()
 
-    df =  pd.read_csv('dog_cat_train.csv')
+    df =  pd.read_csv(args.dataset_df_path)
     df['category'] = df['category'].astype(str)
 
-    training_gen, testing_gen = get_generator(df, train_path, IMAGE_SIZE, batch_size=1)
+    training_gen, testing_gen = get_generator(df, args.training_path, IMAGE_SIZE, batch_size=args.batch_size)
 
-    train(model, training_gen, testing_gen, epochs=10)
+    train(model, training_gen, testing_gen, epochs=args.epochs)
 

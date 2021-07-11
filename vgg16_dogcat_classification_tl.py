@@ -1,12 +1,18 @@
-from vgg16_dogcat_classification import get_generator, train, plot_train_history
+from vgg16_dogcat_classification import get_generator, train
 import pandas as pd
 from tensorflow import keras
-from tensorflow.python.framework.test_ops import binary
-from tensorflow.python.ops.random_ops import categorical
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
-from sklearn.model_selection import train_test_split
+import argparse
 
-IMAGE_WIDTH = IMAGE_HEIGHT = 190
+parse = argparse.ArgumentParser(description='Deep learning training',
+                                formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+parse.add_argument('dataset_df_path', help='input the dataset dataframe')
+parse.add_argument('training_path', help='the training path store all images')
+parse.add_argument('image_size', help='input the height or width of image', default=190, type=int)
+parse.add_argument('--batch_size', help='the batch size when training', type=int, default=10)
+parse.add_argument('--epochs', help='number of epochs', type=int, default=10)
+args = parse.parse_args()
+
+IMAGE_WIDTH = IMAGE_HEIGHT = args.image_size
 IMAGE_SIZE = (IMAGE_WIDTH, IMAGE_HEIGHT)
 IMAGE_CHANNELS = 3
 INPUT_SHAPE = (IMAGE_WIDTH, IMAGE_HEIGHT, IMAGE_CHANNELS)
@@ -36,15 +42,13 @@ def create_model():
     return model
 
 CLASS_NAMES = ('cat', 'dog')
-train_path = 'input/train/'
-test_path = 'input/test1/'
 
 model = create_model()
 
-df =  pd.read_csv('dog_cat_train.csv')
+df =  pd.read_csv(args.dataset_df_path)
 df['category'] = df['category'].astype(str)
 
-training_gen, testing_gen = get_generator(df, train_path, IMAGE_SIZE)
-train(model, training_gen, testing_gen, epochs=10)
+training_gen, testing_gen = get_generator(df, args.training_path, IMAGE_SIZE, batch_size=args.batch_size)
+train(model, training_gen, testing_gen, epochs=args.epochs)
 
 model.save('vgg16_dogcat.h5')
